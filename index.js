@@ -44,9 +44,63 @@ async function run() {
     await client.connect();
 
     const toysCollection = client.db("robots").collection("toys");
+    const testimonialsCollection = client.db("robots").collection("testimonials");
 
     app.get("/allToys", async (req, res) => {
-      const result = await toysCollection.find().toArray();
+      // const sellerEmail = req.query.email;
+      // console.log(sellerEmail);
+      let query = {};
+      if (req.query?.sellerEmail) {
+        query = { sellerEmail: req.query.email };
+      }
+      const result = await toysCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    app.get('/testimonials', async(req, res) =>{
+      const result = await testimonialsCollection.find().toArray()
+      res.send(result)
+    })
+
+    app.get("/sellerToys", async (req, res) => {
+      const sellerEmail = req.query.email;
+      // console.log(sellerEmail);
+
+      try {
+        const query = { sellerEmail: sellerEmail };
+        const sellerToys = await toysCollection.find(query).toArray();
+        res.send(sellerToys);
+      } catch (error) {
+        console.error("Error:", error);
+        res.status(500).json({ error: "Internal server error" });
+      }
+    });
+
+    app.put("/updateToy/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedBooking = req.body;
+      const updateDoc = {
+        $set: {
+          name: updatedBooking.name,
+          pictureURL: updatedBooking.pictureURL,
+          pictureURL: updatedBooking.pictureURL,
+          price: parseFloat(updatedBooking.price),
+          rating: parseFloat(updatedBooking.rating),
+          availableQuantity: parseFloat(updatedBooking.availableQuantity),
+          subCategory: updatedBooking.subCategory,
+          description: updatedBooking.description,
+        },
+      };
+
+      const result = await toysCollection.updateOne(filter, updateDoc)
+      res.send(result)
+    });
+
+    app.delete("/addedToy/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await toysCollection.deleteOne(query);
       res.send(result);
     });
 
@@ -56,14 +110,6 @@ async function run() {
       const result = await toysCollection.findOne(query);
       res.send(result);
     });
-
-    app.get('/allToys', async(req, res) => {
-      const email = req.query.email;
-      console.log(email)
-      const query = { email: email };
-      const result = await toysCollection.find(query).toArray()
-      res.send(result)
-    })
 
     app.post("/addToy", async (req, res) => {
       const toy = req.body;
